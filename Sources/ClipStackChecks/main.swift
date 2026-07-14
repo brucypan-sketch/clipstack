@@ -1,2 +1,3 @@
 runClassifierChecks()
+runClipHistoryChecks()
 finish()
