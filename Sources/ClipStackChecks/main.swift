@@ -1,3 +1,4 @@
 runClassifierChecks()
 runClipHistoryChecks()
+runMenuTitleChecks()
 finish()
