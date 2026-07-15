@@ -48,4 +48,12 @@ func runClipHistoryChecks() {
     let h6 = ClipHistory(fileURL: nil)
     h6.add("mem")
     expect(h6.entries.count == 1, "memory-only mode works")
+
+    let oversizedURL = dir.appendingPathComponent("oversized.json")
+    let manyTexts = (0..<60).map { "item\($0)" }
+    try? JSONEncoder().encode(manyTexts).write(to: oversizedURL)
+    let h7 = ClipHistory(fileURL: oversizedURL)
+    expect(h7.entries.count == 50, "load caps oversized file at maxEntries")
+    expect(h7.entries.first?.text == "item0", "load keeps newest after cap")
+    expect(h7.entries.last?.text == "item49", "load drops oldest past cap")
 }

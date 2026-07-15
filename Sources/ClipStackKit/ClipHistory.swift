@@ -50,7 +50,7 @@ public final class ClipHistory {
         guard let fileURL,
               let data = try? Data(contentsOf: fileURL),
               let texts = try? JSONDecoder().decode([String].self, from: data) else { return }
-        entries = texts.map { ClipEntry(text: $0, category: Classifier.classify($0)) }
+        entries = texts.prefix(Self.maxEntries).map { ClipEntry(text: $0, category: Classifier.classify($0)) }
     }
 
     private func save() {
