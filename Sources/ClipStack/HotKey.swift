@@ -26,6 +26,9 @@ final class HotKey {
                                   GetApplicationEventTarget(), 0, &hotKeyRef) == noErr,
               hotKeyRef != nil else {
             if let eventHandler { RemoveEventHandler(eventHandler) }
+            // deinit still runs after `return nil` (all stored properties are
+            // initialized by now), so nil the ref or it gets removed twice.
+            eventHandler = nil
             return nil
         }
     }
