@@ -1,5 +1,6 @@
 import AppKit
 import ClipStackKit
+import ServiceManagement
 
 /// The 📋 status item and its menu. Hybrid layout: 5 most recent entries on
 /// top, then one submenu per non-empty category, then app controls. The menu
@@ -59,6 +60,13 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
                                action: #selector(clearHistory), keyEquivalent: "")
         clear.target = self
         menu.addItem(clear)
+
+        let login = NSMenuItem(title: "Start at Login",
+                               action: #selector(toggleLogin), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(login)
+
         menu.addItem(NSMenuItem(title: "Quit ClipStack",
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
@@ -81,5 +89,24 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func clearHistory() {
         history.clear()
+    }
+
+    @objc private func toggleLogin() {
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled {
+                try service.unregister()
+            } else {
+                try service.register()
+            }
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Couldn't change login item"
+            alert.informativeText = error.localizedDescription
+                + "\n\nStart at Login only works when running the installed app "
+                + "(~/Applications/ClipStack.app), not a bare debug binary."
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
     }
 }
