@@ -14,5 +14,10 @@ let package = Package(
             dependencies: ["ClipStackKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .executableTarget(
+            name: "ClipStack",
+            dependencies: ["ClipStackKit"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ]
 )
