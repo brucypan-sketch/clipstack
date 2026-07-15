@@ -4,6 +4,7 @@ import ClipStackKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var history: ClipHistory!
     private var watcher: ClipboardWatcher!
+    private var menuController: StatusMenuController!
 
     static var historyFileURL: URL? {
         FileManager.default
@@ -17,5 +18,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.history.add(text)
         }
         watcher.start()
+        menuController = StatusMenuController(history: history)
     }
 }
