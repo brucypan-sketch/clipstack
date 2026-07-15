@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var history: ClipHistory!
     private var watcher: ClipboardWatcher!
     private var menuController: StatusMenuController!
+    private var hotKey: HotKey?
 
     static var historyFileURL: URL? {
         FileManager.default
@@ -19,5 +20,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         watcher.start()
         menuController = StatusMenuController(history: history)
+        hotKey = HotKey { [weak self] in
+            self?.menuController.popUpAtMouse()
+        }
+        if hotKey == nil {
+            let alert = NSAlert()
+            alert.messageText = "ClipStack couldn't register ⌘⇧V"
+            alert.informativeText = "Another app may already use this shortcut. "
+                + "The menu bar icon still works."
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
     }
 }
