@@ -19,5 +19,3 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 
 Development: `swift build`, `swift run ClipStackChecks` (no `swift test`
 here — Command Line Tools don't ship a test framework).
-
-Spec: `docs/superpowers/specs/2026-07-14-clipboard-history-design.md`.
