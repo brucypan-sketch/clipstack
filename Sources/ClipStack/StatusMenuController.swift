@@ -2,7 +2,7 @@ import AppKit
 import ClipStackKit
 import ServiceManagement
 
-/// The 📋 status item and its menu. Hybrid layout: 5 most recent entries on
+/// The status item and its menu. Hybrid layout: 5 most recent entries on
 /// top, then one submenu per non-empty category, then app controls. The menu
 /// is rebuilt every time it opens (menuNeedsUpdate) or is popped by hotkey.
 final class StatusMenuController: NSObject, NSMenuDelegate {
@@ -16,7 +16,12 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         self.history = history
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
-        statusItem.button?.title = "📋"
+        // Template image (not the 📋 emoji) so the icon renders monochrome and
+        // matches the rest of the system menu bar's SF Symbol glyphs, in both
+        // light and dark menu bar tint and when the item is highlighted.
+        let icon = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "ClipStack")
+        icon?.isTemplate = true
+        statusItem.button?.image = icon
         menu.delegate = self
         statusItem.menu = menu
     }

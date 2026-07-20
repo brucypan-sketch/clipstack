@@ -7,7 +7,7 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 ## Use
 
 - **⌘⇧V** anywhere → history menu pops at the cursor.
-- Or click the 📋 icon in the menu bar.
+- Or click the clipboard icon in the menu bar.
 - Pick an entry → it's back on your clipboard; paste with ⌘V.
 - Passwords copied from password managers are never recorded.
 - History (50 newest text copies) survives restarts:
