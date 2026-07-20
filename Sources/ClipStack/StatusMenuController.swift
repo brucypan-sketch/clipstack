@@ -19,9 +19,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         // Template image (not the 📋 emoji) so the icon renders monochrome and
         // matches the rest of the system menu bar's SF Symbol glyphs, in both
         // light and dark menu bar tint and when the item is highlighted.
-        let icon = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "ClipStack")
-        icon?.isTemplate = true
-        statusItem.button?.image = icon
+        statusItem.button?.image = Self.templateSymbol("doc.on.clipboard", accessibilityDescription: "ClipStack")
         menu.delegate = self
         statusItem.menu = menu
     }
@@ -52,8 +50,8 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             for entry in categoryEntries {
                 submenu.addItem(entryItem(for: entry))
             }
-            let item = NSMenuItem(title: "\(category.icon) \(category.menuLabel)",
-                                  action: nil, keyEquivalent: "")
+            let item = NSMenuItem(title: category.menuLabel, action: nil, keyEquivalent: "")
+            item.image = Self.templateSymbol(category.symbolName, accessibilityDescription: category.menuLabel)
             item.submenu = submenu
             menu.addItem(item)
         }
@@ -78,11 +76,20 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func entryItem(for entry: ClipEntry) -> NSMenuItem {
-        let item = NSMenuItem(title: "\(entry.category.icon) \(MenuTitle.display(for: entry.text))",
+        let item = NSMenuItem(title: MenuTitle.display(for: entry.text),
                               action: #selector(restore(_:)), keyEquivalent: "")
+        item.image = Self.templateSymbol(entry.category.symbolName, accessibilityDescription: entry.category.menuLabel)
         item.target = self
         item.representedObject = entry.text
         return item
+    }
+
+    /// Builds a monochrome template image from an SF Symbol so menu items
+    /// match the system's own glyph style instead of colored emoji.
+    private static func templateSymbol(_ name: String, accessibilityDescription: String?) -> NSImage? {
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)
+        image?.isTemplate = true
+        return image
     }
 
     @objc private func restore(_ sender: NSMenuItem) {
