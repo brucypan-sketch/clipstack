@@ -56,14 +56,26 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         menu.removeAllItems()
 
         let all = history.entries
-        for (index, entry) in all.prefix(Self.recentCount).enumerated() {
+
+        let pinned = all.filter(\.pinned)
+        for entry in pinned {
+            for item in entryItems(for: entry, keyEquivalent: "", showPin: true) {
+                menu.addItem(item)
+            }
+        }
+        if !pinned.isEmpty {
+            menu.addItem(.separator())
+        }
+
+        let unpinned = all.filter { !$0.pinned }
+        for (index, entry) in unpinned.prefix(Self.recentCount).enumerated() {
             // Plain 1–5 key equivalents: with the menu open, a digit restores
             // that entry without reaching for the mouse.
             for item in entryItems(for: entry, keyEquivalent: "\(index + 1)") {
                 menu.addItem(item)
             }
         }
-        if !all.isEmpty {
+        if !unpinned.isEmpty {
             menu.addItem(.separator())
         }
 
@@ -108,15 +120,22 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     /// Primary item restores the entry; holding ⌥ swaps in an alternate
-    /// (trash icon) that deletes it instead. Both must be added adjacently
-    /// with the same key equivalent for AppKit's alternate mechanism.
-    private func entryItems(for entry: ClipEntry, keyEquivalent: String) -> [NSMenuItem] {
+    /// (trash icon) that deletes it, holding ⇧ one (pin icon) that pins or
+    /// unpins it. Alternates must be added adjacent to the primary with the
+    /// same key equivalent for AppKit's alternate mechanism.
+    private func entryItems(for entry: ClipEntry, keyEquivalent: String,
+                            showPin: Bool = false) -> [NSMenuItem] {
         let title = MenuTitle.display(for: entry.text)
+        // Pinned-section rows show the pin instead of the category icon —
+        // that's what identifies the section.
+        let icon = showPin
+            ? Self.templateSymbol("pin", accessibilityDescription: "Pinned")
+            : Self.templateSymbol(entry.category.symbolName, accessibilityDescription: entry.category.menuLabel)
 
         let item = NSMenuItem(title: title,
                               action: #selector(restore(_:)), keyEquivalent: keyEquivalent)
         item.keyEquivalentModifierMask = []
-        item.image = Self.templateSymbol(entry.category.symbolName, accessibilityDescription: entry.category.menuLabel)
+        item.image = icon
         item.target = self
         item.representedObject = entry.text
         item.toolTip = Self.toolTip(for: entry)
@@ -130,7 +149,19 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         delete.representedObject = entry.text
         delete.toolTip = "Delete this entry from history"
 
-        return [item, delete]
+        let pin = NSMenuItem(title: title,
+                             action: #selector(togglePin(_:)), keyEquivalent: keyEquivalent)
+        pin.keyEquivalentModifierMask = .shift
+        pin.isAlternate = true
+        pin.image = Self.templateSymbol(entry.pinned ? "pin.slash" : "pin",
+                                        accessibilityDescription: entry.pinned ? "Unpin" : "Pin")
+        pin.target = self
+        pin.representedObject = entry.text
+        pin.toolTip = entry.pinned
+            ? "Unpin (entry becomes subject to the cap and expiry again)"
+            : "Pin (entry is kept forever, exempt from the cap and expiry)"
+
+        return [item, delete, pin]
     }
 
     /// Copy time plus the start of the full text — menu titles truncate at
@@ -161,6 +192,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     @objc private func deleteEntry(_ sender: NSMenuItem) {
         guard let text = sender.representedObject as? String else { return }
         history.remove(text: text)
+    }
+
+    @objc private func togglePin(_ sender: NSMenuItem) {
+        guard let text = sender.representedObject as? String else { return }
+        history.togglePin(text: text)
     }
 
     @objc private func clearHistory() {

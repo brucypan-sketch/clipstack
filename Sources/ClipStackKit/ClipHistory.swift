@@ -4,11 +4,24 @@ public struct ClipEntry: Equatable, Codable {
     public let text: String
     public let category: ClipCategory
     public let copiedAt: Date
+    /// Pinned entries are exempt from the size cap and from expiry.
+    public let pinned: Bool
 
-    public init(text: String, category: ClipCategory, copiedAt: Date = Date()) {
+    public init(text: String, category: ClipCategory,
+                copiedAt: Date = Date(), pinned: Bool = false) {
         self.text = text
         self.category = category
         self.copiedAt = copiedAt
+        self.pinned = pinned
+    }
+
+    // Custom decode only: files written before pinning existed lack the key.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(String.self, forKey: .text)
+        category = try container.decode(ClipCategory.self, forKey: .category)
+        copiedAt = try container.decode(Date.self, forKey: .copiedAt)
+        pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
     }
 }
 
@@ -46,13 +59,14 @@ public final class ClipHistory {
         pruneExpired()
     }
 
-    /// Drops expired entries. Called on init and add; call it from the UI
-    /// before displaying history so an idle app doesn't show stale entries.
+    /// Drops expired entries (pinned entries never expire). Called on init
+    /// and add; call it from the UI before displaying history so an idle app
+    /// doesn't show stale entries.
     public func pruneExpired() {
         guard let maxAge else { return }
         let cutoff = Date(timeIntervalSinceNow: -maxAge)
         let before = entries.count
-        entries.removeAll { $0.copiedAt < cutoff }
+        entries.removeAll { !$0.pinned && $0.copiedAt < cutoff }
         if entries.count != before {
             scheduleSave()
         }
@@ -64,15 +78,37 @@ public final class ClipHistory {
         pruneExpired()
         if let index = entries.firstIndex(where: { $0.text == text }) {
             let old = entries.remove(at: index)
-            entries.insert(ClipEntry(text: old.text, category: old.category), at: 0)
+            entries.insert(ClipEntry(text: old.text, category: old.category,
+                                     pinned: old.pinned), at: 0)
         } else {
             entries.insert(ClipEntry(text: text, category: Classifier.classify(text)), at: 0)
-            if entries.count > maxEntries {
-                entries.removeLast(entries.count - maxEntries)
-            }
+            trimToCap()
         }
         scheduleSave()
         return true
+    }
+
+    /// Pins or unpins the entry with this text.
+    public func togglePin(text: String) {
+        guard let index = entries.firstIndex(where: { $0.text == text }) else { return }
+        let old = entries[index]
+        entries[index] = ClipEntry(text: old.text, category: old.category,
+                                   copiedAt: old.copiedAt, pinned: !old.pinned)
+        scheduleSave()
+    }
+
+    /// Removes the oldest unpinned entries until at most maxEntries unpinned
+    /// remain. Pinned entries don't count toward, and are never removed by,
+    /// the cap.
+    private func trimToCap() {
+        var excess = entries.count(where: { !$0.pinned }) - maxEntries
+        guard excess > 0 else { return }
+        for index in stride(from: entries.count - 1, through: 0, by: -1) where excess > 0 {
+            if !entries[index].pinned {
+                entries.remove(at: index)
+                excess -= 1
+            }
+        }
     }
 
     public func entries(in category: ClipCategory) -> [ClipEntry] {
@@ -112,12 +148,13 @@ public final class ClipHistory {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         if let stored = try? decoder.decode([ClipEntry].self, from: data) {
-            entries = Array(stored.filter { Self.isStorable($0.text) }.prefix(maxEntries))
+            entries = stored.filter { Self.isStorable($0.text) }
+            trimToCap()
         } else if let texts = try? JSONDecoder().decode([String].self, from: data) {
             // Legacy format: plain string array, no categories or timestamps.
             entries = texts.filter(Self.isStorable)
-                .prefix(maxEntries)
                 .map { ClipEntry(text: $0, category: Classifier.classify($0)) }
+            trimToCap()
         } else {
             // Corrupt: preserve the evidence instead of letting the next
             // save() clobber it, then start empty.

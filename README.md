@@ -15,6 +15,9 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
   preview of the full text (titles truncate at 50 characters).
 - Hold **⌥ (option)** and click an entry to delete just that entry
   (the icon switches to a trash can while ⌥ is down).
+- Hold **⇧ (shift)** and click an entry to pin it: pinned entries live in
+  their own section at the top and are exempt from the size cap and expiry —
+  good for snippets you paste all the time. ⇧-click again to unpin.
 - Copies that password managers mark confidential (the standard
   `ConcealedType` pasteboard marker — 1Password, Bitwarden, etc.) are never
   recorded. A password copied from somewhere unmarked (e.g. a terminal) is

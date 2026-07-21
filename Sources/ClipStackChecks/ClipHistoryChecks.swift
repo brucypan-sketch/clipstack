@@ -112,6 +112,39 @@ func runClipHistoryChecks() {
     let h13 = ClipHistory(fileURL: smallURL, saveDelay: 0, maxEntries: 2)
     expect(h13.entries.map(\.text) == ["s4", "s3"], "custom maxEntries caps load")
 
+    // Pinning: exempt from cap and expiry, persisted, toggleable.
+    let pinURL = dir.appendingPathComponent("pin.json")
+    let hp = ClipHistory(fileURL: pinURL, saveDelay: 0, maxEntries: 3)
+    hp.add("keeper")
+    hp.togglePin(text: "keeper")
+    for i in 0..<5 { hp.add("p\(i)") }
+    expect(hp.entries.contains { $0.text == "keeper" && $0.pinned },
+           "pinned entry survives the cap")
+    expect(hp.entries.count(where: { !$0.pinned }) == 3,
+           "cap counts only unpinned entries")
+    let hpReload = ClipHistory(fileURL: pinURL, saveDelay: 0, maxEntries: 3)
+    expect(hpReload.entries.contains { $0.text == "keeper" && $0.pinned },
+           "pinned flag round-trips")
+    hpReload.add("keeper")
+    expect(hpReload.entries.first?.pinned == true, "re-copy keeps entry pinned")
+    hpReload.togglePin(text: "keeper")
+    expect(hpReload.entries.first?.pinned == false, "unpin works")
+
+    let hpAge = ClipHistory(fileURL: nil, saveDelay: 0, maxAge: 0.0001)
+    hpAge.add("pinned forever")
+    hpAge.togglePin(text: "pinned forever")
+    Thread.sleep(forTimeInterval: 0.01)
+    hpAge.pruneExpired()
+    expect(hpAge.entries.count == 1, "pinned entries never expire")
+
+    // Files written before pinning existed (no pinned key) still decode.
+    let prePinURL = dir.appendingPathComponent("prepin.json")
+    try? #"[{"text":"old","category":"text","copiedAt":"2026-07-20T00:00:00Z"}]"#
+        .write(to: prePinURL, atomically: true, encoding: .utf8)
+    let hPre = ClipHistory(fileURL: prePinURL, saveDelay: 0, maxAge: nil)
+    expect(hPre.entries.first?.text == "old" && hPre.entries.first?.pinned == false,
+           "pre-pinning files decode with pinned defaulting to false")
+
     // Expiry: entries older than maxAge are pruned at load; nil never expires.
     let agedURL = dir.appendingPathComponent("aged.json")
     let aged = [
