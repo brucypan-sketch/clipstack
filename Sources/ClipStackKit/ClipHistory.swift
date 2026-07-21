@@ -24,7 +24,11 @@ public final class ClipHistory {
     public static let defaultMaxEntries = 50
     public static let maxItemBytes = 1_000_000
 
+    public static let defaultMaxAge: TimeInterval = 7 * 86_400
+
     public let maxEntries: Int
+    /// Entries older than this are pruned; nil means never expire.
+    public let maxAge: TimeInterval?
     public private(set) var entries: [ClipEntry] = []
     private let fileURL: URL?
     private let saveDelay: TimeInterval
@@ -32,16 +36,32 @@ public final class ClipHistory {
 
     public init(fileURL: URL?,
                 saveDelay: TimeInterval = 0.5,
-                maxEntries: Int = ClipHistory.defaultMaxEntries) {
+                maxEntries: Int = ClipHistory.defaultMaxEntries,
+                maxAge: TimeInterval? = ClipHistory.defaultMaxAge) {
         self.fileURL = fileURL
         self.saveDelay = saveDelay
         self.maxEntries = max(1, maxEntries)
+        self.maxAge = maxAge
         load()
+        pruneExpired()
+    }
+
+    /// Drops expired entries. Called on init and add; call it from the UI
+    /// before displaying history so an idle app doesn't show stale entries.
+    public func pruneExpired() {
+        guard let maxAge else { return }
+        let cutoff = Date(timeIntervalSinceNow: -maxAge)
+        let before = entries.count
+        entries.removeAll { $0.copiedAt < cutoff }
+        if entries.count != before {
+            scheduleSave()
+        }
     }
 
     @discardableResult
     public func add(_ text: String) -> Bool {
         guard Self.isStorable(text) else { return false }
+        pruneExpired()
         if let index = entries.firstIndex(where: { $0.text == text }) {
             let old = entries.remove(at: index)
             entries.insert(ClipEntry(text: old.text, category: old.category), at: 0)

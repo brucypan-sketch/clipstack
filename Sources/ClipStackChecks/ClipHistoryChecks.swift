@@ -100,6 +100,27 @@ func runClipHistoryChecks() {
     let h13 = ClipHistory(fileURL: smallURL, saveDelay: 0, maxEntries: 2)
     expect(h13.entries.map(\.text) == ["s4", "s3"], "custom maxEntries caps load")
 
+    // Expiry: entries older than maxAge are pruned at load; nil never expires.
+    let agedURL = dir.appendingPathComponent("aged.json")
+    let aged = [
+        ClipEntry(text: "fresh", category: .text),
+        ClipEntry(text: "stale", category: .text,
+                  copiedAt: Date(timeIntervalSinceNow: -10 * 86_400)),
+    ]
+    let agedEncoder = JSONEncoder()
+    agedEncoder.dateEncodingStrategy = .iso8601
+    try? agedEncoder.encode(aged).write(to: agedURL)
+    let h14 = ClipHistory(fileURL: agedURL, saveDelay: 0, maxAge: 7 * 86_400)
+    expect(h14.entries.map(\.text) == ["fresh"], "expired entries pruned at load")
+    try? agedEncoder.encode(aged).write(to: agedURL)
+    let h15 = ClipHistory(fileURL: agedURL, saveDelay: 0, maxAge: nil)
+    expect(h15.entries.count == 2, "maxAge nil never expires")
+    let h16 = ClipHistory(fileURL: nil, saveDelay: 0, maxAge: 0.0001)
+    h16.add("gone soon")
+    Thread.sleep(forTimeInterval: 0.01)
+    h16.pruneExpired()
+    expect(h16.entries.isEmpty, "pruneExpired drops aged entries")
+
     // Saved file is 0600 from the first write (no chmod window).
     let perms = (try? FileManager.default.attributesOfItem(atPath: debounceURL.path))?[.posixPermissions] as? Int
     expect(perms == 0o600, "history file written with 0600 permissions")

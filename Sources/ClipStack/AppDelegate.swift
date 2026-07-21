@@ -27,7 +27,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let defaults = UserDefaults.standard
         let maxEntries = (defaults.object(forKey: "maxEntries") as? NSNumber)?.intValue
             ?? ClipHistory.defaultMaxEntries
-        history = ClipHistory(fileURL: Self.historyFileURL, maxEntries: maxEntries)
+        // maxAgeDays 0 = never expire; absent = default (7 days).
+        let maxAge: TimeInterval?
+        if let days = (defaults.object(forKey: "maxAgeDays") as? NSNumber)?.doubleValue {
+            maxAge = days > 0 ? days * 86_400 : nil
+        } else {
+            maxAge = ClipHistory.defaultMaxAge
+        }
+        history = ClipHistory(fileURL: Self.historyFileURL,
+                              maxEntries: maxEntries, maxAge: maxAge)
         watcher = ClipboardWatcher { [weak self] text in
             if self?.history.add(text) == false {
                 NSLog("ClipStack: copy not recorded (empty or over 1 MB)")
@@ -38,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The poller ticks every 0.5 s, so without this hook a copy made just
         // before opening the menu wouldn't be in it yet.
         menuController.refreshHistory = { [weak self] in
+            self?.history.pruneExpired()
             self?.watcher.checkNow()
         }
 

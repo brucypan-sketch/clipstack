@@ -26,6 +26,7 @@ All optional, via `defaults write com.brucepan.clipstack …`; relaunch to apply
     hotKeyCode -int 9          # Carbon key code (9 = V)
     hotKeyModifiers -int 4608  # ⌃⇧ (control 4096 + shift 512; cmd 256, option 2048)
     maxEntries -int 100        # history size (default 50)
+    maxAgeDays -int 30         # auto-delete entries older than this (default 7; 0 = never)
 
 ## Build & install
 
