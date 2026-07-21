@@ -44,6 +44,13 @@ final class ClipboardWatcher {
         check()
     }
 
+    /// Discards anything copied since the last poll without recording it.
+    /// Call before start() when resuming from a pause, so copies made while
+    /// paused aren't captured retroactively.
+    func resync() {
+        lastChangeCount = pasteboard.changeCount
+    }
+
     private func check() {
         let count = pasteboard.changeCount
         guard count != lastChangeCount else { return }

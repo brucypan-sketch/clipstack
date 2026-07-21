@@ -12,6 +12,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     /// clipboard change into history first (the watcher ticks at 0.5 s).
     var refreshHistory: (() -> Void)?
 
+    /// Called when the user toggles Pause Capture; receives the new paused
+    /// state. The owner starts/stops the watcher accordingly.
+    var captureToggled: ((Bool) -> Void)?
+    private(set) var capturePaused = false
+
     private static let copiedAtFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -45,7 +50,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func rebuild() {
-        refreshHistory?()
+        if !capturePaused {
+            refreshHistory?()
+        }
         menu.removeAllItems()
 
         let all = history.entries
@@ -76,6 +83,12 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         if !all.isEmpty {
             menu.addItem(.separator())
         }
+
+        let pause = NSMenuItem(title: "Pause Capture",
+                               action: #selector(togglePause), keyEquivalent: "")
+        pause.target = self
+        pause.state = capturePaused ? .on : .off
+        menu.addItem(pause)
 
         let clear = NSMenuItem(title: "Clear History",
                                action: #selector(clearHistory), keyEquivalent: "")
@@ -130,6 +143,14 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func clearHistory() {
         history.clear()
+    }
+
+    @objc private func togglePause() {
+        capturePaused.toggle()
+        // Dimmed icon is the native "present but inactive" signal, and it
+        // stays visible after the menu closes, unlike the checkmark.
+        statusItem.button?.appearsDisabled = capturePaused
+        captureToggled?(capturePaused)
     }
 
     @objc private func toggleLogin() {

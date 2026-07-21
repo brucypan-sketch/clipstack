@@ -49,6 +49,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.history.pruneExpired()
             self?.watcher.checkNow()
         }
+        menuController.captureToggled = { [weak self] paused in
+            if paused {
+                self?.watcher.stop()
+            } else {
+                // Resync first: copies made while paused must not be captured
+                // retroactively the moment the timer restarts.
+                self?.watcher.resync()
+                self?.watcher.start()
+            }
+        }
 
         let keyCode = (defaults.object(forKey: "hotKeyCode") as? NSNumber)?.uint32Value
             ?? HotKey.defaultKeyCode

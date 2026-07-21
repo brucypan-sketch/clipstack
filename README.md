@@ -16,7 +16,9 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 - Copies that password managers mark confidential (the standard
   `ConcealedType` pasteboard marker — 1Password, Bitwarden, etc.) are never
   recorded. A password copied from somewhere unmarked (e.g. a terminal) is
-  recorded like any other text, so clear the history after handling secrets.
+  recorded like any other text — use **Pause Capture** in the menu before
+  handling secrets (the menu bar icon dims while paused; copies made during
+  the pause are never recorded, even after resuming).
 - History (50 newest text copies) survives restarts:
   `~/Library/Application Support/ClipStack/history.json` (owner-only perms).
 
