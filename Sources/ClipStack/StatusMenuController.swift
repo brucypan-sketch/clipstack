@@ -99,8 +99,18 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         item.image = Self.templateSymbol(entry.category.symbolName, accessibilityDescription: entry.category.menuLabel)
         item.target = self
         item.representedObject = entry.text
-        item.toolTip = "Copied \(Self.copiedAtFormatter.string(from: entry.copiedAt))"
+        item.toolTip = Self.toolTip(for: entry)
         return item
+    }
+
+    /// Copy time plus the start of the full text — menu titles truncate at
+    /// 50 characters, so hovering is how you inspect a long entry.
+    private static func toolTip(for entry: ClipEntry) -> String {
+        let header = "Copied \(copiedAtFormatter.string(from: entry.copiedAt))"
+        let preview = entry.text.count <= 500
+            ? entry.text
+            : String(entry.text.prefix(500)) + "…"
+        return "\(header)\n\n\(preview)"
     }
 
     /// Builds a monochrome template image from an SF Symbol so menu items

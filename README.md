@@ -11,7 +11,8 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
   hotkey would steal it from all of them.)
 - Or click the clipboard icon in the menu bar.
 - Pick an entry (or press 1–5 while the menu is open) → it's back on your
-  clipboard; paste with ⌘V. Hover an entry to see when it was copied.
+  clipboard; paste with ⌘V. Hover an entry to see when it was copied and a
+  preview of the full text (titles truncate at 50 characters).
 - Copies that password managers mark confidential (the standard
   `ConcealedType` pasteboard marker — 1Password, Bitwarden, etc.) are never
   recorded. A password copied from somewhere unmarked (e.g. a terminal) is
