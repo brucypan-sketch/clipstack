@@ -57,12 +57,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
         let all = history.entries
         for (index, entry) in all.prefix(Self.recentCount).enumerated() {
-            let item = entryItem(for: entry)
             // Plain 1–5 key equivalents: with the menu open, a digit restores
             // that entry without reaching for the mouse.
-            item.keyEquivalent = "\(index + 1)"
-            item.keyEquivalentModifierMask = []
-            menu.addItem(item)
+            for item in entryItems(for: entry, keyEquivalent: "\(index + 1)") {
+                menu.addItem(item)
+            }
         }
         if !all.isEmpty {
             menu.addItem(.separator())
@@ -73,7 +72,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             guard !categoryEntries.isEmpty else { continue }
             let submenu = NSMenu()
             for entry in categoryEntries {
-                submenu.addItem(entryItem(for: entry))
+                for item in entryItems(for: entry, keyEquivalent: "") {
+                    submenu.addItem(item)
+                }
             }
             let item = NSMenuItem(title: category.menuLabel, action: nil, keyEquivalent: "")
             item.image = Self.templateSymbol(category.symbolName, accessibilityDescription: category.menuLabel)
@@ -106,14 +107,30 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
                                 keyEquivalent: "q"))
     }
 
-    private func entryItem(for entry: ClipEntry) -> NSMenuItem {
-        let item = NSMenuItem(title: MenuTitle.display(for: entry.text),
-                              action: #selector(restore(_:)), keyEquivalent: "")
+    /// Primary item restores the entry; holding ⌥ swaps in an alternate
+    /// (trash icon) that deletes it instead. Both must be added adjacently
+    /// with the same key equivalent for AppKit's alternate mechanism.
+    private func entryItems(for entry: ClipEntry, keyEquivalent: String) -> [NSMenuItem] {
+        let title = MenuTitle.display(for: entry.text)
+
+        let item = NSMenuItem(title: title,
+                              action: #selector(restore(_:)), keyEquivalent: keyEquivalent)
+        item.keyEquivalentModifierMask = []
         item.image = Self.templateSymbol(entry.category.symbolName, accessibilityDescription: entry.category.menuLabel)
         item.target = self
         item.representedObject = entry.text
         item.toolTip = Self.toolTip(for: entry)
-        return item
+
+        let delete = NSMenuItem(title: title,
+                                action: #selector(deleteEntry(_:)), keyEquivalent: keyEquivalent)
+        delete.keyEquivalentModifierMask = .option
+        delete.isAlternate = true
+        delete.image = Self.templateSymbol("trash", accessibilityDescription: "Delete")
+        delete.target = self
+        delete.representedObject = entry.text
+        delete.toolTip = "Delete this entry from history"
+
+        return [item, delete]
     }
 
     /// Copy time plus the start of the full text — menu titles truncate at
@@ -139,6 +156,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+
+    @objc private func deleteEntry(_ sender: NSMenuItem) {
+        guard let text = sender.representedObject as? String else { return }
+        history.remove(text: text)
     }
 
     @objc private func clearHistory() {

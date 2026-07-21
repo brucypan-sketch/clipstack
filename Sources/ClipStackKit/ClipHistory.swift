@@ -79,6 +79,17 @@ public final class ClipHistory {
         entries.filter { $0.category == category }
     }
 
+    /// Removes the entry with this exact text (entries are unique by text).
+    public func remove(text: String) {
+        let before = entries.count
+        entries.removeAll { $0.text == text }
+        if entries.count != before {
+            // Immediate, not debounced: removal is usually "get this sensitive
+            // thing off disk", so don't leave it in the file for another 0.5 s.
+            flush()
+        }
+    }
+
     public func clear() {
         entries = []
         flush()

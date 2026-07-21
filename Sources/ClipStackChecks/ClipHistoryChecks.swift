@@ -92,6 +92,18 @@ func runClipHistoryChecks() {
     let h11 = ClipHistory(fileURL: debounceURL, saveDelay: 0)
     expect(h11.entries.map(\.text) == ["pending"], "flushed save round-trips")
 
+    // Single-entry removal persists immediately.
+    let removeURL = dir.appendingPathComponent("remove.json")
+    let hr = ClipHistory(fileURL: removeURL, saveDelay: 60)
+    hr.add("keep")
+    hr.add("drop")
+    hr.remove(text: "drop")
+    expect(hr.entries.map(\.text) == ["keep"], "remove(text:) drops only that entry")
+    hr.remove(text: "not there")
+    expect(hr.entries.count == 1, "remove of unknown text is a no-op")
+    let hr2 = ClipHistory(fileURL: removeURL, saveDelay: 0)
+    expect(hr2.entries.map(\.text) == ["keep"], "remove persists without waiting for debounce")
+
     // Custom cap: both add-side and load-side trimming honor it.
     let smallURL = dir.appendingPathComponent("small.json")
     let h12 = ClipHistory(fileURL: smallURL, saveDelay: 0, maxEntries: 3)

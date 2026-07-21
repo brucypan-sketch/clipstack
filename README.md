@@ -13,6 +13,8 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 - Pick an entry (or press 1–5 while the menu is open) → it's back on your
   clipboard; paste with ⌘V. Hover an entry to see when it was copied and a
   preview of the full text (titles truncate at 50 characters).
+- Hold **⌥ (option)** and click an entry to delete just that entry
+  (the icon switches to a trash can while ⌥ is down).
 - Copies that password managers mark confidential (the standard
   `ConcealedType` pasteboard marker — 1Password, Bitwarden, etc.) are never
   recorded. A password copied from somewhere unmarked (e.g. a terminal) is
