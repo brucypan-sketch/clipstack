@@ -19,10 +19,13 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 - History (50 newest text copies) survives restarts:
   `~/Library/Application Support/ClipStack/history.json` (owner-only perms).
 
-To change the shortcut, set a Carbon key code and modifier mask and relaunch:
+## Settings
 
-    defaults write com.brucepan.clipstack hotKeyCode -int 9        # V
-    defaults write com.brucepan.clipstack hotKeyModifiers -int 4608  # ⌃⇧ (control 4096 + shift 512)
+All optional, via `defaults write com.brucepan.clipstack …`; relaunch to apply.
+
+    hotKeyCode -int 9          # Carbon key code (9 = V)
+    hotKeyModifiers -int 4608  # ⌃⇧ (control 4096 + shift 512; cmd 256, option 2048)
+    maxEntries -int 100        # history size (default 50)
 
 ## Build & install
 

@@ -24,7 +24,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        history = ClipHistory(fileURL: Self.historyFileURL)
+        let defaults = UserDefaults.standard
+        let maxEntries = (defaults.object(forKey: "maxEntries") as? NSNumber)?.intValue
+            ?? ClipHistory.defaultMaxEntries
+        history = ClipHistory(fileURL: Self.historyFileURL, maxEntries: maxEntries)
         watcher = ClipboardWatcher { [weak self] text in
             if self?.history.add(text) == false {
                 NSLog("ClipStack: copy not recorded (empty or over 1 MB)")
@@ -38,7 +41,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.watcher.checkNow()
         }
 
-        let defaults = UserDefaults.standard
         let keyCode = (defaults.object(forKey: "hotKeyCode") as? NSNumber)?.uint32Value
             ?? HotKey.defaultKeyCode
         let modifiers = (defaults.object(forKey: "hotKeyModifiers") as? NSNumber)?.uint32Value

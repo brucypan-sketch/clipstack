@@ -92,6 +92,14 @@ func runClipHistoryChecks() {
     let h11 = ClipHistory(fileURL: debounceURL, saveDelay: 0)
     expect(h11.entries.map(\.text) == ["pending"], "flushed save round-trips")
 
+    // Custom cap: both add-side and load-side trimming honor it.
+    let smallURL = dir.appendingPathComponent("small.json")
+    let h12 = ClipHistory(fileURL: smallURL, saveDelay: 0, maxEntries: 3)
+    for i in 0..<5 { h12.add("s\(i)") }
+    expect(h12.entries.map(\.text) == ["s4", "s3", "s2"], "custom maxEntries caps adds")
+    let h13 = ClipHistory(fileURL: smallURL, saveDelay: 0, maxEntries: 2)
+    expect(h13.entries.map(\.text) == ["s4", "s3"], "custom maxEntries caps load")
+
     // Saved file is 0600 from the first write (no chmod window).
     let perms = (try? FileManager.default.attributesOfItem(atPath: debounceURL.path))?[.posixPermissions] as? Int
     expect(perms == 0o600, "history file written with 0600 permissions")

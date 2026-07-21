@@ -21,17 +21,21 @@ public struct ClipEntry: Equatable, Codable {
 /// (pass 0 for synchronous saves, e.g. in checks); call flush() before
 /// process exit so a pending save isn't lost.
 public final class ClipHistory {
-    public static let maxEntries = 50
+    public static let defaultMaxEntries = 50
     public static let maxItemBytes = 1_000_000
 
+    public let maxEntries: Int
     public private(set) var entries: [ClipEntry] = []
     private let fileURL: URL?
     private let saveDelay: TimeInterval
     private var pendingSave: DispatchWorkItem?
 
-    public init(fileURL: URL?, saveDelay: TimeInterval = 0.5) {
+    public init(fileURL: URL?,
+                saveDelay: TimeInterval = 0.5,
+                maxEntries: Int = ClipHistory.defaultMaxEntries) {
         self.fileURL = fileURL
         self.saveDelay = saveDelay
+        self.maxEntries = max(1, maxEntries)
         load()
     }
 
@@ -43,8 +47,8 @@ public final class ClipHistory {
             entries.insert(ClipEntry(text: old.text, category: old.category), at: 0)
         } else {
             entries.insert(ClipEntry(text: text, category: Classifier.classify(text)), at: 0)
-            if entries.count > Self.maxEntries {
-                entries.removeLast(entries.count - Self.maxEntries)
+            if entries.count > maxEntries {
+                entries.removeLast(entries.count - maxEntries)
             }
         }
         scheduleSave()
@@ -77,11 +81,11 @@ public final class ClipHistory {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         if let stored = try? decoder.decode([ClipEntry].self, from: data) {
-            entries = Array(stored.filter { Self.isStorable($0.text) }.prefix(Self.maxEntries))
+            entries = Array(stored.filter { Self.isStorable($0.text) }.prefix(maxEntries))
         } else if let texts = try? JSONDecoder().decode([String].self, from: data) {
             // Legacy format: plain string array, no categories or timestamps.
             entries = texts.filter(Self.isStorable)
-                .prefix(Self.maxEntries)
+                .prefix(maxEntries)
                 .map { ClipEntry(text: $0, category: Classifier.classify($0)) }
         } else {
             // Corrupt: preserve the evidence instead of letting the next
