@@ -4,7 +4,9 @@
 set -euo pipefail
 cd "${0:a:h}"
 
-swift run ClipStackChecks
+# Checks run in release config: gate the build that actually ships, not a
+# debug build the release binary never sees.
+swift run -c release ClipStackChecks
 swift build -c release
 
 APP_DIR="build/ClipStack.app"

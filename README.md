@@ -6,12 +6,23 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 
 ## Use
 
-- **⌘⇧V** anywhere → history menu pops at the cursor.
+- **⌃⇧V** (Control-Shift-V) anywhere → history menu pops at the cursor.
+  (Not ⌘⇧V — that's "Paste and Match Style" in many apps, and a global
+  hotkey would steal it from all of them.)
 - Or click the clipboard icon in the menu bar.
-- Pick an entry → it's back on your clipboard; paste with ⌘V.
-- Passwords copied from password managers are never recorded.
+- Pick an entry (or press 1–5 while the menu is open) → it's back on your
+  clipboard; paste with ⌘V. Hover an entry to see when it was copied.
+- Copies that password managers mark confidential (the standard
+  `ConcealedType` pasteboard marker — 1Password, Bitwarden, etc.) are never
+  recorded. A password copied from somewhere unmarked (e.g. a terminal) is
+  recorded like any other text, so clear the history after handling secrets.
 - History (50 newest text copies) survives restarts:
-  `~/Library/Application Support/ClipStack/history.json`.
+  `~/Library/Application Support/ClipStack/history.json` (owner-only perms).
+
+To change the shortcut, set a Carbon key code and modifier mask and relaunch:
+
+    defaults write com.brucepan.clipstack hotKeyCode -int 9        # V
+    defaults write com.brucepan.clipstack hotKeyModifiers -int 4608  # ⌃⇧ (control 4096 + shift 512)
 
 ## Build & install
 

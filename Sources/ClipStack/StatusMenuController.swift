@@ -8,6 +8,17 @@ import ServiceManagement
 final class StatusMenuController: NSObject, NSMenuDelegate {
     static let recentCount = 5
 
+    /// Called before every rebuild so the owner can pull any not-yet-polled
+    /// clipboard change into history first (the watcher ticks at 0.5 s).
+    var refreshHistory: (() -> Void)?
+
+    private static let copiedAtFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     private let statusItem: NSStatusItem
     private let menu = NSMenu()
     private let history: ClipHistory
@@ -34,17 +45,24 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func rebuild() {
+        refreshHistory?()
         menu.removeAllItems()
 
-        for entry in history.entries.prefix(Self.recentCount) {
-            menu.addItem(entryItem(for: entry))
+        let all = history.entries
+        for (index, entry) in all.prefix(Self.recentCount).enumerated() {
+            let item = entryItem(for: entry)
+            // Plain 1–5 key equivalents: with the menu open, a digit restores
+            // that entry without reaching for the mouse.
+            item.keyEquivalent = "\(index + 1)"
+            item.keyEquivalentModifierMask = []
+            menu.addItem(item)
         }
-        if !history.entries.isEmpty {
+        if !all.isEmpty {
             menu.addItem(.separator())
         }
 
         for category in ClipCategory.allCases {
-            let categoryEntries = history.entries(in: category)
+            let categoryEntries = all.filter { $0.category == category }
             guard !categoryEntries.isEmpty else { continue }
             let submenu = NSMenu()
             for entry in categoryEntries {
@@ -55,7 +73,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             item.submenu = submenu
             menu.addItem(item)
         }
-        if !history.entries.isEmpty {
+        if !all.isEmpty {
             menu.addItem(.separator())
         }
 
@@ -81,6 +99,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         item.image = Self.templateSymbol(entry.category.symbolName, accessibilityDescription: entry.category.menuLabel)
         item.target = self
         item.representedObject = entry.text
+        item.toolTip = "Copied \(Self.copiedAtFormatter.string(from: entry.copiedAt))"
         return item
     }
 

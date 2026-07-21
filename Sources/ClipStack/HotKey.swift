@@ -3,15 +3,28 @@ import Carbon.HIToolbox
 /// Global hotkey via Carbon RegisterEventHotKey — needs no Accessibility
 /// permission, unlike CGEventTap. Failable: returns nil if the combo is
 /// already registered by another app.
+///
+/// Default is ⌃⇧V, NOT ⌘⇧V: ⌘⇧V is "Paste and Match Style" in many apps
+/// (Notes, Slack, ...) and a global registration would steal it from all of
+/// them silently. ⌃⇧V has no standard macOS meaning.
 final class HotKey {
+    static let defaultKeyCode = UInt32(kVK_ANSI_V)
+    static let defaultModifiers = UInt32(controlKey | shiftKey)
+
+    fileprivate static let signature = OSType(0x434C5053) // 'CLPS'
+    private static var nextID: UInt32 = 0
+
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
+    fileprivate let hotKeyID: UInt32
     fileprivate let callback: () -> Void
 
-    init?(keyCode: Int = kVK_ANSI_V,
-          modifiers: Int = cmdKey | shiftKey,
+    init?(keyCode: UInt32 = HotKey.defaultKeyCode,
+          modifiers: UInt32 = HotKey.defaultModifiers,
           callback: @escaping () -> Void) {
         self.callback = callback
+        Self.nextID += 1
+        self.hotKeyID = Self.nextID
 
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                       eventKind: UInt32(kEventHotKeyPressed))
@@ -21,8 +34,8 @@ final class HotKey {
             return nil
         }
 
-        let hotKeyID = EventHotKeyID(signature: OSType(0x434C5053), id: 1) // 'CLPS'
-        guard RegisterEventHotKey(UInt32(keyCode), UInt32(modifiers), hotKeyID,
+        let eventHotKeyID = EventHotKeyID(signature: Self.signature, id: hotKeyID)
+        guard RegisterEventHotKey(keyCode, modifiers, eventHotKeyID,
                                   GetApplicationEventTarget(), 0, &hotKeyRef) == noErr,
               hotKeyRef != nil else {
             if let eventHandler { RemoveEventHandler(eventHandler) }
@@ -42,7 +55,17 @@ final class HotKey {
 private func hotKeyEventHandler(_ nextHandler: EventHandlerCallRef?,
                                 _ event: EventRef?,
                                 _ userData: UnsafeMutableRawPointer?) -> OSStatus {
-    guard let userData else { return noErr }
-    Unmanaged<HotKey>.fromOpaque(userData).takeUnretainedValue().callback()
+    guard let userData, let event else { return noErr }
+    // Verify which hotkey fired instead of assuming ours: a second HotKey
+    // instance would otherwise trigger every instance's callback.
+    var firedID = EventHotKeyID()
+    let status = GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                                   EventParamType(typeEventHotKeyID), nil,
+                                   MemoryLayout<EventHotKeyID>.size, nil, &firedID)
+    let hotKey = Unmanaged<HotKey>.fromOpaque(userData).takeUnretainedValue()
+    guard status == noErr,
+          firedID.signature == HotKey.signature,
+          firedID.id == hotKey.hotKeyID else { return noErr }
+    hotKey.callback()
     return noErr
 }

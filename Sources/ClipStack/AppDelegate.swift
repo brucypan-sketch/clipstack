@@ -14,22 +14,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Two instances polling the same history file silently undo each
+        // other's writes (last-writer-wins), so refuse to be the second one.
+        // Bare debug binaries have no bundle identifier and skip this.
+        if let bundleID = Bundle.main.bundleIdentifier,
+           NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).count > 1 {
+            NSLog("ClipStack: another instance is already running; quitting.")
+            NSApp.terminate(nil)
+            return
+        }
+
         history = ClipHistory(fileURL: Self.historyFileURL)
         watcher = ClipboardWatcher { [weak self] text in
-            self?.history.add(text)
+            if self?.history.add(text) == false {
+                NSLog("ClipStack: copy not recorded (empty or over 1 MB)")
+            }
         }
         watcher.start()
         menuController = StatusMenuController(history: history)
-        hotKey = HotKey { [weak self] in
+        // The poller ticks every 0.5 s, so without this hook a copy made just
+        // before opening the menu wouldn't be in it yet.
+        menuController.refreshHistory = { [weak self] in
+            self?.watcher.checkNow()
+        }
+
+        let defaults = UserDefaults.standard
+        let keyCode = (defaults.object(forKey: "hotKeyCode") as? NSNumber)?.uint32Value
+            ?? HotKey.defaultKeyCode
+        let modifiers = (defaults.object(forKey: "hotKeyModifiers") as? NSNumber)?.uint32Value
+            ?? HotKey.defaultModifiers
+        hotKey = HotKey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
             self?.menuController.popUpAtMouse()
         }
         if hotKey == nil {
             let alert = NSAlert()
-            alert.messageText = "ClipStack couldn't register ⌘⇧V"
-            alert.informativeText = "Another app may already use this shortcut. "
-                + "The menu bar icon still works."
+            alert.messageText = "ClipStack couldn't register its global shortcut"
+            alert.informativeText = "Another app may already use this combination. "
+                + "The menu bar icon still works, and the shortcut can be changed "
+                + "with `defaults write com.brucepan.clipstack hotKeyCode/hotKeyModifiers`."
             NSApp.activate(ignoringOtherApps: true)
             alert.runModal()
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // A debounced save may still be pending; don't lose it.
+        history?.flush()
     }
 }

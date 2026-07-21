@@ -1,4 +1,4 @@
-public enum ClipCategory: String, CaseIterable {
+public enum ClipCategory: String, CaseIterable, Codable {
     case link, email, phone, text
 
     /// SF Symbol name for this category, used for menu item images so they
