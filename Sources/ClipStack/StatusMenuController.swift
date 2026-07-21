@@ -17,6 +17,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     var captureToggled: ((Bool) -> Void)?
     private(set) var capturePaused = false
 
+    /// Called by the Search History… menu item; the owner shows the panel.
+    var openSearch: (() -> Void)?
+
     private static let copiedAtFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -96,6 +99,12 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         if !all.isEmpty {
             menu.addItem(.separator())
         }
+
+        let search = NSMenuItem(title: "Search History…",
+                                action: #selector(openSearchPanel), keyEquivalent: "")
+        search.target = self
+        search.image = Self.templateSymbol("magnifyingglass", accessibilityDescription: "Search")
+        menu.addItem(search)
 
         let pause = NSMenuItem(title: "Pause Capture",
                                action: #selector(togglePause), keyEquivalent: "")
@@ -201,6 +210,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func clearHistory() {
         history.clear()
+    }
+
+    @objc private func openSearchPanel() {
+        openSearch?()
     }
 
     @objc private func togglePause() {

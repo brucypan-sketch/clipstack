@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var history: ClipHistory!
     private var watcher: ClipboardWatcher!
     private var menuController: StatusMenuController!
+    private var searchPanel: SearchPanelController!
     private var hotKey: HotKey?
 
     static var historyFileURL: URL? {
@@ -60,12 +61,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        searchPanel = SearchPanelController(history: history) { [weak self] in
+            guard self?.menuController.capturePaused == false else { return }
+            self?.history.pruneExpired()
+            self?.watcher.checkNow()
+        }
+        menuController.openSearch = { [weak self] in
+            self?.searchPanel.show()
+        }
+
         let keyCode = (defaults.object(forKey: "hotKeyCode") as? NSNumber)?.uint32Value
             ?? HotKey.defaultKeyCode
         let modifiers = (defaults.object(forKey: "hotKeyModifiers") as? NSNumber)?.uint32Value
             ?? HotKey.defaultModifiers
+        let hotKeyOpensSearch = defaults.bool(forKey: "hotKeyOpensSearch")
         hotKey = HotKey(keyCode: keyCode, modifiers: modifiers) { [weak self] in
-            self?.menuController.popUpAtMouse()
+            if hotKeyOpensSearch {
+                self?.searchPanel.show()
+            } else {
+                self?.menuController.popUpAtMouse()
+            }
         }
         if hotKey == nil {
             let alert = NSAlert()

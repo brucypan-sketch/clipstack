@@ -18,6 +18,9 @@ anything: builds with the Swift toolchain from Xcode Command Line Tools.
 - Hold **⇧ (shift)** and click an entry to pin it: pinned entries live in
   their own section at the top and are exempt from the size cap and expiry —
   good for snippets you paste all the time. ⇧-click again to unpin.
+- **Search History…** in the menu opens a panel that filters the full text
+  of every entry as you type (not just the visible titles): ↑/↓ to select,
+  Enter to restore, Esc to close.
 - Copies that password managers mark confidential (the standard
   `ConcealedType` pasteboard marker — 1Password, Bitwarden, etc.) are never
   recorded. A password copied from somewhere unmarked (e.g. a terminal) is
@@ -35,6 +38,7 @@ All optional, via `defaults write com.brucepan.clipstack …`; relaunch to apply
     hotKeyModifiers -int 4608  # ⌃⇧ (control 4096 + shift 512; cmd 256, option 2048)
     maxEntries -int 100        # history size (default 50)
     maxAgeDays -int 30         # auto-delete entries older than this (default 7; 0 = never)
+    hotKeyOpensSearch -bool true  # hotkey opens the search panel instead of the menu
 
 ## Build & install
 
